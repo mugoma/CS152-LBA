@@ -4,7 +4,7 @@ from flask_cors import CORS
 from pyswip.prolog import Prolog
 from pyswip.easy import *
 
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room
 import threading
 import uuid
 
@@ -58,9 +58,9 @@ def get_user_response(A, V, Y, P: str):
     if isinstance(Y, Variable):
         req_id = str(uuid.uuid4())
         event = threading.Event()
-        pending_inputs[req_id] = {"event": event, "answer": None}
-        # Emit a SocketIO event to the frontend (from the main thread)
-        socketio.emit("input_request", {"question": str(P).format(V), "req_id": req_id})
+        pending_inputs[req_id] = {"event": event, "answer": None, "sid": request.sid}
+        # Emit a SocketIO event to the frontend (from the main thread), only to the current user
+        socketio.emit("input_request", {"question": str(P).format(V), "req_id": req_id, "sid": request.sid}, to=request.sid)
         # Wait for the answer to be set by the handler
         event.wait()
         answer = pending_inputs[req_id]["answer"]
@@ -85,6 +85,8 @@ def index():
 @socketio.on("connect")
 def handle_connect():
     print("Client connected via WebSocket")
+    # Optionally, join a room for this sid
+    # join_room(request.sid)
 
 
 @socketio.on("start")
@@ -111,7 +113,7 @@ def handle_start():
         response = f"Recommended cafe is {problem['X']}"
     else:
         response = "No cafe identified."
-    emit("final_problem", {"problem": response})
+    emit("final_problem", {"problem": response}, to=request.sid)
     print("Ending Session")
 
 

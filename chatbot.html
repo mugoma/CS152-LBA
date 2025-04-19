@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot</title>
+    <title>Cafe Recommender</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -66,15 +66,34 @@
 
         .chat-input button {
             padding: 10px 15px;
-            background: #007bff;
             color: #fff;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            margin: 3px;
         }
 
-        .chat-input button:hover {
+        .blue-button {
+            background: #007bff;
+        }
+
+        .blue-button:hover {
             background: #0056b3;
+        }
+
+        .green-button {
+            background: #28a745;
+        }
+
+        .green-button:hover {
+            background: #218838;
+        }
+
+        .chat-input button:disabled {
+            background: #cccccc !important;
+            color: #666666;
+            cursor: not-allowed;
+            opacity: 0.7;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
@@ -83,7 +102,7 @@
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            Chatbot
+            Cafe Recommender
         </div>
         <div class="chat-messages" id="chat-messages">
             <!-- Chat messages will appear here -->
@@ -91,14 +110,18 @@
         <div class="chat-input">
             <input type="text" id="user-input" placeholder="Type your message here...">
             <input type="hidden" id="req-id">
-            <button onclick="sendMessage()">Send</button>
-            <button onclick="start()">Start</button>
+            <button class="blue-button" id="send-btn" onclick="sendMessage()" disabled>Send</button>
+            <button class="green-button" id="start-btn" onclick="start()">Start</button>
         </div>
     </div>
 
     <script>
+        function setSendButton(enabled) {
+            document.getElementById('send-btn').disabled = !enabled;
+        }
         function start() {
             socket.emit('start');
+            setSendButton(true);
         }
         const chatMessages = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');
@@ -107,11 +130,13 @@
 
         socket.on('connect', () => {
             console.log('Connected to WebSocket server');
+            setSendButton(false); // Ensure send is disabled on connect
         });
 
         socket.on('final_problem', (data) => {
             console.log('Received response:', data);
             addMessage('bot', data.problem);
+            setSendButton(false); // Disable send after final problem
         });
         socket.on('input_request', (event) => {
             console.log('Question  received:', event);
@@ -124,7 +149,7 @@
             if (message) {
                 addMessage('user', message);
                 console.log('Sending message:', message);
-                socket.emit('user_input', { answer: message, req_id:reqID.value });
+                socket.emit('user_input', { answer: message, req_id: reqID.value });
                 reqID.value = '';
                 userInput.value = '';
             }
